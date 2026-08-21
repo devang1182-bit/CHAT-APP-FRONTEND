@@ -2,11 +2,9 @@
 "use client";
 
 import { useState } from "react";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import styles from "./style.module.css";
-
 import {
   Button,
   TextField,
@@ -18,39 +16,17 @@ import {
   IconButton,
   FormHelperText,
 } from "@mui/material";
-
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-
-import { createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
-
-import { setDoc, doc, serverTimestamp } from "firebase/firestore";
 import Snackbar from "@mui/material/Snackbar";
 import { useRouter } from "next/navigation";
-import { auth, db, provider } from "@/firebase/firebase";
 import Link from "next/link";
-
-const RegisterUserSchema = z
-  .object({
-    displayName: z.string().min(4, "Username should be of minimum 4 characters"),
-    email: z.string().email("Invalid email"),
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .refine((val) => !val.includes(" "), {
-        message: "Password must not contain spaces",
-      }),
-    confirmPassword: z
-      .string()
-      .min(8, "Confirm Password not matches the above password"),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    path: ["confirmPassword"],
-    message: "Confirm Password and Password doesn't match",
-  });
-
-type RegisterFormData = z.infer<typeof RegisterUserSchema>;
+import { RegisterFormData, RegisterUserSchema } from "./sign-up.schema";
+import { useAppDispatch } from "@/hooks/dispatch";
+import { CustomSignUpAction } from "@/features/users/user-custom-sign-up/user-custom-sign-up.action";
+import { GoogleSignInAction } from "@/features/users/user-google-sign-in/user-google-sign-in.action";
 
 export default function Register() {
+  const dispatch = useAppDispatch();
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [snackbar, setSnackbar] = useState<{
@@ -88,47 +64,23 @@ export default function Register() {
 
   const handleRegister = async (data: RegisterFormData) => {
     try {
-      const { email, password, displayName } = data;
-
-      await createUserWithEmailAndPassword(auth, email, password);
-      const user = auth.currentUser;
-
-      if (user) {
-        await setDoc(doc(db, "users", user.uid), {
-          email,
-          displayName,
-          createdAt: serverTimestamp(),
-        });
-      }
-
+      dispatch(CustomSignUpAction(data));
       reset();
       showSnackbar("Registration successful");
       setTimeout(() => router.push("/"), 500);
     } catch (error) {
       showSnackbar("User Already Signed In");
-      console.error(error);
+      setTimeout(() => router.push("/auth/sign-in"), 500);
     }
   };
 
-  const handleSignin = async () => {
+  const handleGoogleLogin = async () => {
     try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      console.log(result);
-      await setDoc(
-        doc(db, "users", user.uid),
-        {
-          email: user.email,
-          displayName: user.displayName || "User",
-          createdAt: serverTimestamp(),
-        },
-        { merge: true },
-      );
+      dispatch(GoogleSignInAction());
       showSnackbar("Registration successful");
       router.push("/");
-    } catch (err) {
+    } catch (error) {
       showSnackbar("Not able to sign in with google");
-      router.push("/auth/sign-up");
     }
   };
 
@@ -139,14 +91,14 @@ export default function Register() {
           sx={{ color: "black", fontFamily: '"Dancing Script", cursive' }}
           variant="h3"
         >
-          Chat App
+          Sign Up
         </Typography>
 
         <Button
           fullWidth
           variant="contained"
           sx={{ mt: 3, mb: 2 }}
-          onClick={handleSignin}
+          onClick={handleGoogleLogin}
         >
           Sign up with Google
         </Button>

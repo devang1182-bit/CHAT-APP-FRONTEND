@@ -1,10 +1,13 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { UserState } from "./user.type";
 import { GetUsersAction } from "./get-users/get-users.action";
-import { GetCurrentUserAction } from "./get-current-user/get-current-user.action";
+import { GoogleSignInAction } from "./user-google-sign-in/user-google-sign-in.action";
+import { CustomSignInAction } from "./user-custom-sign-in/user-custom-sign-in.action";
+import { CustomSignUpAction } from "./user-custom-sign-up/user-custom-sign-up.action";
 
 const initialState: UserState = {
   users: [],
+  selectedChatUser: null,
   currentUser: null,
   loading: false,
   error: null,
@@ -17,6 +20,10 @@ const usersSlice = createSlice({
     logout: (state) => {
       state.currentUser = null;
     },
+
+    setSelectedChatUser : (state , action) => {
+      state.selectedChatUser = action.payload
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -27,28 +34,53 @@ const usersSlice = createSlice({
       })
       .addCase(GetUsersAction.fulfilled, (state, action) => {
         state.loading = false;
-        state.users = action.payload
-        console.log(state.users)
+        state.users = action.payload;
       })
       .addCase(GetUsersAction.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
-      .addCase(GetCurrentUserAction.pending, (state) => {
+      .addCase(GoogleSignInAction.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(GetCurrentUserAction.fulfilled, (state, action) => {
+      .addCase(GoogleSignInAction.fulfilled, (state, action) => {
         state.loading = false;
         state.currentUser = action.payload ?? null;
-        // console.log(state.currentUser, "Current User");
+        console.log("Current User : ", state.currentUser);
       })
-      .addCase(GetCurrentUserAction.rejected, (state, action) => {
+      .addCase(GoogleSignInAction.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(CustomSignInAction.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(CustomSignInAction.fulfilled, (state, action) => {
+        state.loading = false;
+        state.currentUser = action.payload ?? null;
+        console.log("Current User : ", state.currentUser);
+      })
+      .addCase(CustomSignInAction.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(CustomSignUpAction.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(CustomSignUpAction.fulfilled, (state, action) => {
+        state.loading = false;
+        state.currentUser = action.payload ?? null;
+        console.log("Current User : ", state.currentUser);
+      })
+      .addCase(CustomSignUpAction.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });
   },
 });
 
-export const { logout } = usersSlice.actions;
+export const { logout , setSelectedChatUser} = usersSlice.actions;
 export default usersSlice.reducer;

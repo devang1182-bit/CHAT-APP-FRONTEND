@@ -1,30 +1,28 @@
-.message-row {
+.messageRow {
   display: flex;
   width: 100%;
-  margin: 1px 0;   
 }
 
-.message-row.me {
+.currentUser {
   justify-content: flex-end;
 }
 
-.message-row.other {
+.other {
   justify-content: flex-start;
 }
 
-.message-bubble {
+.messageBubble {
   position: relative;
   display: inline-block;
-  max-width: 65%;
+  max-width: 70%;
   min-width: 70px;              
   padding: 8px 12px 18px 12px;
-  margin: 2px 0;                
   font-size: 14px;
   line-height: 1.35;
   border-radius: 8px;
   word-wrap: break-word;
   box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
-  animation: popIn .18s ease;
+  animation: msgPop .18s ease;
 }
 
 .sent {
@@ -63,7 +61,7 @@
 }
 
 
-.msg-time {
+.msgTime {
   position: absolute;
   bottom: 4px;
   right: 8px;
@@ -81,15 +79,16 @@
 }
 
 
-.typing-bubble {
-  background:white;
+.typingBubble {
+  width: fit-content;
   padding:8px 12px;
   border-radius:8px;
   display:flex;
   gap:4px;
+  margin-top: 8px;
 }
 
-.typing-bubble span{
+.typingBubble span{
   width:6px;
   height:6px;
   background:#667781;
@@ -97,10 +96,32 @@
   animation:bounce 1.3s infinite;
 }
 
-.typing-bubble span:nth-child(2){animation-delay:.2s}
-.typing-bubble span:nth-child(3){animation-delay:.4s}
+.typingBubble span:nth-child(2){animation-delay:.2s}
+.typingBubble span:nth-child(3){animation-delay:.4s}
 
 @keyframes bounce{
   0%,80%,100%{transform:translateY(0)}
   40%{transform:translateY(-6px)}
+}
+
+.myButton {
+  background-color: #007bff; 
+  width: 120px;
+  color: #ffffff;         
+  padding: 12px 24px;       
+  font-size: 14px;        
+  font-weight: 400;         
+  border: none;            
+  border-radius: 6px;       
+  cursor: pointer;         
+  transition: background-color 0.2s ease, transform 0.1s ease; 
+}
+
+.myButton:hover {
+  background-color: #0056b3;
+}
+
+
+.myButton:active {
+  transform: scale(0.98);
 }

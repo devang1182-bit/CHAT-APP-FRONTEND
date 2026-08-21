@@ -10,10 +10,12 @@ const port = 4000;
 
 const app = express();
 
-app.use(cors({
-  origin: "http://localhost:3000",
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  }),
+);
 
 app.use(express.json());
 
@@ -27,7 +29,7 @@ const io = new Server(httpServer, {
   cors: {
     origin: "http://localhost:3000",
     methods: ["GET", "POST"],
-    credentials: true
+    credentials: true,
   },
 });
 
@@ -39,7 +41,7 @@ io.on("connection", (socket) => {
     socket.data.id = uid;
   });
 
-  socket.joinRoom = (roomId) => {}; 
+  socket.joinRoom = (roomId) => {};
   socket.on("joinRoom", (roomId) => {
     console.log(`${socket.id} joined room: ${roomId}`);
     socket.join(roomId);
@@ -75,10 +77,24 @@ io.on("connection", (socket) => {
         ...message,
       };
 
+      io.to(roomId).emit("newMessage", savedMessage);
       console.log("Message saved:", savedMessage);
-      // io.to(roomId).emit("newMessage", savedMessage);
     } catch (error) {
       console.error("Error sending message:", error);
+    }
+  });
+
+  socket.on("deleteMessage", (data) => {
+    try {
+      console.log("Delete event listened");
+      console.log(data, 'this is the data');
+      socket.broadcast.to(data.roomId).emit("deleteMessageInOthers", {
+        id: data.id,
+        roomId: data.roomId,
+      });
+      console.log("This message was deleted", data);
+    } catch (error) {
+      console.error("Failed to delete message:", error);
     }
   });
 
@@ -87,16 +103,13 @@ io.on("connection", (socket) => {
     socket.broadcast.to(data.roomId).emit("typing", data);
   });
 
-  // socket.on("stopTyping", (data) => {
-  //   console.log("server is listening the stop typing event");
-  //   socket.broadcast.to(data.roomId).emit("typing-stop", data);
-  // });
-
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
   });
 });
 
 httpServer.listen(port, () => {
-  console.log(`> Standalone Express Socket Server ready on http://localhost:${port}`);
+  console.log(
+    `> Standalone Express Socket Server ready on http://localhost:${port}`,
+  );
 });

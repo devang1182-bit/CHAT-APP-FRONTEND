@@ -2,7 +2,10 @@
 
 import { useEffect } from "react";
 import { useAppDispatch } from "@/hooks/dispatch";
-import { addMessage } from "@/features/messages/messages.slice";
+import {
+  addMessage,
+  deleteMessageFromStateByOther,
+} from "@/features/messages/messages.slice";
 import { Message } from "@/features/messages/messages.type";
 import socket from "@/lib/socket";
 import { CurrentUser } from "@/features/users/user.type";
@@ -61,22 +64,32 @@ const useChatSocket = ({
     };
   }, [roomId]);
 
+  useEffect(() => {
+    if (!roomId) return;
+    const handleDeleteMessageFromOtherState = (data : {roomId : string , id:string}) => {
+      dispatch(deleteMessageFromStateByOther(data));
+    };
 
+    socket.on("deleteMessageInOthers", handleDeleteMessageFromOtherState);
+    console.log('2');
+    console.log("Delete event listened");
 
-  // useEffect(() => {
-  //   if (!roomId) return;
+    return () => {
+      socket.off("deleteMessageInOthers", handleDeleteMessageFromOtherState);
+    };
+  }, [dispatch, roomId]);
 
-  //   const handleNewMessage = (message: Message) => {
-  //     console.log("New message:", message);
-  //     dispatch(addMessage(message));
-  //   };
-
-  //   socket.on("newMessage", handleNewMessage);
-
-  //   return () => {
-  //     socket.off("newMessage", handleNewMessage);
-  //   };
-  // }, [roomId, dispatch]);
+  useEffect(() => {
+    if (!roomId) return;
+    const handleNewMessage = (message: Message) => {
+      console.log("New message:", message);
+      dispatch(addMessage(message));
+    };
+    socket.on("newMessage", handleNewMessage);
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+    };
+  }, [roomId, dispatch]);
 
   const sendMessage = (text: string) => {
     if (!text.trim()) return;
@@ -91,6 +104,16 @@ const useChatSocket = ({
     });
   };
 
+  const deleteMessage = (msg: Message) => {
+    if (!msg) return;
+    if (!msg.id) return;
+    socket.emit("deleteMessage", {
+      roomId: msg.roomId,
+      id: msg.id,
+    });
+    console.log("Delete Event Emitted");
+  };
+
   const sendTyping = () => {
     if (!roomId || !currentUser) return;
 
@@ -102,19 +125,10 @@ const useChatSocket = ({
     });
   };
 
-  // const stopTyping = () => {
-  //   if (!roomId || !currentUser) return;
-
-  //   socket.emit("stopTyping", {
-  //     roomId,
-  //     userid: currentUser.uid,
-  //   });
-  // };
-
   return {
     sendMessage,
     sendTyping,
-    // stopTyping
+    deleteMessage,
   };
 };
 

@@ -12,6 +12,7 @@ export type CurrentUser = {
 
 export type UserState = {
   users: User[];
+  selectedChatUser: User | null;
   currentUser: CurrentUser | null;
   loading: boolean;
   error: string | null;

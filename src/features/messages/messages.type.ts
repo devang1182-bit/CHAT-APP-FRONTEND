@@ -9,6 +9,7 @@ export type Message = {
 
 export type MessageState = {
   messages: Message[];
+  messageText: string;
   loading: boolean;
   error: string | null;
 };

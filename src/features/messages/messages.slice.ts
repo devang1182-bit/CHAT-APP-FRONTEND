@@ -1,9 +1,10 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Message, MessageState } from "./messages.type";
+import { createSlice } from "@reduxjs/toolkit";
+import { MessageState } from "./messages.type";
 import { GetMessagesAction } from "./get-message/get-message.action";
 
 const initialState: MessageState = {
   messages: [],
+  messageText: "",
   loading: false,
   error: null,
 };
@@ -18,13 +19,28 @@ const messageSlice = createSlice({
       state.messages = [];
     },
 
-    setMessages: (state, action: PayloadAction<Message[]>) => {
-      state.messages = action.payload;
+    clearMessageText: (state) => {
+      state.messageText = "";
     },
 
-    addMessage: (state, action: PayloadAction<Message>) => {
-      state.messages = [...state.messages , action.payload];
-      console.log(state.messages, "Messages in local storage");
+    addMessage: (state, action) => {
+      state.messages = [...state.messages, action.payload];
+    },
+
+    setMessageText: (state, action) => {
+      state.messageText = action.payload;
+    },
+
+    deleteMessageFromState: (state, action) => {
+      state.messages = state.messages.filter(
+        (msg) => msg.id !== action.payload,
+      );
+    },
+
+    deleteMessageFromStateByOther: (state, action) => {
+      state.messages = state.messages.filter(
+        (msg) => msg.id !== action.payload.id,
+      );
     },
   },
 
@@ -49,6 +65,13 @@ const messageSlice = createSlice({
   },
 });
 
-export const { clearMessages, setMessages, addMessage } = messageSlice.actions;
+export const {
+  clearMessages,
+  clearMessageText,
+  setMessageText,
+  addMessage,
+  deleteMessageFromState,
+  deleteMessageFromStateByOther
+} = messageSlice.actions;
 
 export default messageSlice.reducer;
