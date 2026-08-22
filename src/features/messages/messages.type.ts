@@ -10,6 +10,7 @@ export type Message = {
 export type MessageState = {
   messages: Message[];
   messageText: string;
+  editedMessage: Message | null
   loading: boolean;
   error: string | null;
 };

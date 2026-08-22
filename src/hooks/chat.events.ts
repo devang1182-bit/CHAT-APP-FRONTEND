@@ -5,6 +5,7 @@ import { useAppDispatch } from "@/hooks/dispatch";
 import {
   addMessage,
   deleteMessageFromStateByOther,
+  editMessageInOtherState,
 } from "@/features/messages/messages.slice";
 import { Message } from "@/features/messages/messages.type";
 import socket from "@/lib/socket";
@@ -27,11 +28,9 @@ const useChatSocket = ({
     if (!currentUser) return;
 
     socket.connect();
-
     socket.on("connect", () => {
-      console.log("Connected:", socket.id);
-
-      socket.emit("onConnection", currentUser);
+    console.log("Connected:", socket.id);
+    socket.emit("onConnection", currentUser);
     });
 
     socket.on("disconnect", () => {
@@ -52,26 +51,25 @@ const useChatSocket = ({
 
   useEffect(() => {
     if (!roomId) return;
-
     socket.emit("joinRoom", roomId);
-
     console.log("Joined room:", roomId);
-
     return () => {
       socket.emit("leaveRoom", roomId);
-
       console.log("Left room:", roomId);
     };
   }, [roomId]);
 
   useEffect(() => {
     if (!roomId) return;
-    const handleDeleteMessageFromOtherState = (data : {roomId : string , id:string}) => {
+    const handleDeleteMessageFromOtherState = (data: {
+      roomId: string;
+      id: string;
+    }) => {
       dispatch(deleteMessageFromStateByOther(data));
     };
 
     socket.on("deleteMessageInOthers", handleDeleteMessageFromOtherState);
-    console.log('2');
+    console.log("2");
     console.log("Delete event listened");
 
     return () => {
@@ -90,6 +88,21 @@ const useChatSocket = ({
       socket.off("newMessage", handleNewMessage);
     };
   }, [roomId, dispatch]);
+
+    useEffect(() => {
+    if (!roomId) return;
+    const handleEditedMessage = (Data : {id:string , roomId:string , text:string}) => {
+      console.log("New message:", Data);
+      dispatch(editMessageInOtherState(Data));
+    };
+    socket.on("editMessageInRoom", handleEditedMessage);
+    console.log("Edit message in room listened")
+    return () => {
+      socket.off("editMessageInRoom", handleEditedMessage);
+    };
+  }, [roomId, dispatch]);
+
+
 
   const sendMessage = (text: string) => {
     if (!text.trim()) return;
@@ -114,6 +127,16 @@ const useChatSocket = ({
     console.log("Delete Event Emitted");
   };
 
+  const sendEditedMessage = (msg:Message) => {
+    if(!msg) return;
+    if(!msg.id) return;
+    socket.emit("editedMessage" ,{
+      text : msg.message,
+      id : msg.id,
+      roomId : msg.roomId
+    })
+  }
+
   const sendTyping = () => {
     if (!roomId || !currentUser) return;
 
@@ -129,6 +152,7 @@ const useChatSocket = ({
     sendMessage,
     sendTyping,
     deleteMessage,
+    sendEditedMessage
   };
 };
 

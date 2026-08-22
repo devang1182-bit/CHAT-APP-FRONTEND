@@ -87,7 +87,7 @@ io.on("connection", (socket) => {
   socket.on("deleteMessage", (data) => {
     try {
       console.log("Delete event listened");
-      console.log(data, 'this is the data');
+      console.log(data, "this is the data");
       socket.broadcast.to(data.roomId).emit("deleteMessageInOthers", {
         id: data.id,
         roomId: data.roomId,
@@ -95,6 +95,21 @@ io.on("connection", (socket) => {
       console.log("This message was deleted", data);
     } catch (error) {
       console.error("Failed to delete message:", error);
+    }
+  });
+
+  socket.on("editedMessage", (data) => {
+    try {
+      console.log("Edit event listened");
+      console.log(data, "this is the edited data");
+      socket.broadcast.to(data.roomId).emit("editMessageInRoom", {
+        id: data.id,
+        roomId: data.roomId,
+        text: data.text,
+      });
+      console.log("This message was edited", data);
+    } catch (error) {
+      console.error("Failed to edit message:", error);
     }
   });
 

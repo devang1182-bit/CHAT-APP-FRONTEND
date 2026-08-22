@@ -3,8 +3,10 @@
 
 import { DeleteMessageAction } from "@/features/messages/delete-message/delete-message.action";
 import {
+  clearEditedMessage,
   clearMessageText,
   deleteMessageFromState,
+  setEditedMessage,
   setMessageText,
 } from "@/features/messages/messages.slice";
 import { Message } from "@/features/messages/messages.type";
@@ -16,6 +18,8 @@ import React, { useEffect, useState } from "react";
 import styles from "../../style.module.css";
 import SendIcon from "@mui/icons-material/Send";
 import socket from "@/lib/socket";
+import { EditMessageAction } from "@/features/messages/edit-message/edit-message.action";
+import { Cancel, Save } from "@mui/icons-material";
 
 const MessageList = ({
   roomId,
@@ -27,34 +31,47 @@ const MessageList = ({
   let typingTimeout: string | number | NodeJS.Timeout | undefined;
   const dispatch = useAppDispatch();
   const [typing, setTyping] = useState<boolean>(false);
-
+  const [isEditing, setIsEditing] = useState<boolean>(false);
   const { currentUser, selectedChatUser } = useAppSelector(
     (state) => state.users,
   );
-  const { messages, messageText } = useAppSelector((state) => state.messages);
+  const { messages, messageText, editedMessage } = useAppSelector(
+    (state) => state.messages,
+  );
 
-  const [menuControl, setMenuControl] = useState({
+  const [menuControl, setMenuControl] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    messageId: string | null;
+  }>({
     visible: false,
     x: 0,
     y: 0,
+    messageId: null,
   });
+  const { sendMessage, sendTyping, deleteMessage, sendEditedMessage } =
+    useChatSocket({
+      currentUser,
+      targetUser,
+      roomId,
+    });
 
-  const { sendMessage, sendTyping, deleteMessage } = useChatSocket({
-    currentUser,
-    targetUser,
-    roomId,
-  });
-
-  const handleContextMenu = (e: {
-    preventDefault: () => void;
-    clientX: number;
-    clientY: number;
-  }) => {
+  const handleContextMenu = (
+    e: {
+      preventDefault: () => void;
+      clientX: number;
+      clientY: number;
+    },
+    msg: Message,
+  ) => {
     e.preventDefault();
+
     setMenuControl({
       visible: true,
       x: e.clientX,
       y: e.clientY,
+      messageId: msg.id,
     });
   };
 
@@ -69,6 +86,32 @@ const MessageList = ({
     if (!selectedChatUser) return;
     sendMessage(messageText);
     dispatch(clearMessageText());
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    dispatch(clearMessageText());
+    dispatch(clearEditedMessage());
+  };
+
+  const handleSave = () => {
+    if (!editedMessage) return;
+    if (!messageText.trim()) return;
+    const updatedMessage = {
+      ...editedMessage,
+      message: messageText,
+    };
+    dispatch(EditMessageAction(updatedMessage));
+    dispatch(clearMessageText());
+    dispatch(clearEditedMessage());
+    setIsEditing(false);
+    sendEditedMessage(updatedMessage);
+  };
+
+  const handleEdit = (msg: Message) => {
+    setIsEditing(true);
+    dispatch(setEditedMessage(msg));
+    dispatch(setMessageText(msg.message));
   };
 
   const handleMessageChange = (value: string) => {
@@ -168,7 +211,7 @@ const MessageList = ({
                   <Typography
                     sx={{ m: 0.5 }}
                     color="primary"
-                    onContextMenu={handleContextMenu}
+                    onContextMenu={(e) => handleContextMenu(e, msg)}
                     className={`${styles.messageBubble} ${isCurrentUser ? styles.sent : styles.received}`}
                   >
                     {msg.message}
@@ -180,16 +223,16 @@ const MessageList = ({
                     </span>
                   </Typography>
 
-                  {menuControl.visible && (
+                  {/* {menuControl.visible && (
                     <ul
                       style={{
                         position: "absolute",
                         top: `${menuControl.y}px`,
                         left: `${menuControl.x}px`,
                         zIndex: 1000,
-                        display:"flex",
-                        flexDirection:"column",
-                        rowGap:"8px"
+                        display: "flex",
+                        flexDirection: "column",
+                        rowGap: "8px",
                       }}
                     >
                       <li>
@@ -197,21 +240,86 @@ const MessageList = ({
                           className={styles.myButton}
                           onClick={() => handleDelete(msg)}
                         >
-                          Delete Msg
+                          Delete
                         </button>
                       </li>
                       <li>
                         <button
                           className={styles.myButton}
+                          onClick={() => handleEdit(msg)}
                         >
                           Edit
                         </button>
                       </li>
                     </ul>
-                  )}
+                  )} */}
                 </Box>
               );
             })
+          )}
+
+          {menuControl.visible && (
+            <ul
+              style={{
+                position: "fixed",
+                top: menuControl.y,
+                left: menuControl.x,
+                zIndex: 1000,
+                display: "flex",
+                flexDirection: "column",
+                rowGap: "8px",
+                margin: 0,
+                padding: 8,
+                listStyle: "none",
+                background: "white",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <li>
+                <button
+                  className={styles.myButton}
+                  onClick={() => {
+                    const msg = messages.find(
+                      (m) => m.id === menuControl.messageId,
+                    );
+
+                    if (msg) {
+                      handleDelete(msg);
+                    }
+
+                    setMenuControl((prev) => ({
+                      ...prev,
+                      visible: false,
+                    }));
+                  }}
+                >
+                  Delete
+                </button>
+              </li>
+
+              <li>
+                <button
+                  className={styles.myButton}
+                  onClick={() => {
+                    const msg = messages.find(
+                      (m) => m.id === menuControl.messageId,
+                    );
+
+                    if (msg) {
+                      handleEdit(msg);
+                    }
+
+                    setMenuControl((prev) => ({
+                      ...prev,
+                      visible: false,
+                    }));
+                  }}
+                >
+                  Edit
+                </button>
+              </li>
+            </ul>
           )}
 
           {typing ? (
@@ -225,34 +333,69 @@ const MessageList = ({
           )}
         </Box>
 
-        {selectedChatUser && (
-          <Box
-            sx={{
-              p: 2,
-              borderTop: "1px solid #ddd",
-              display: "flex",
-              gap: 1,
-            }}
-          >
-            <TextField
-              fullWidth
-              size="small"
-              value={messageText}
-              placeholder="Type a message..."
-              onChange={(event) => handleMessageChange(event.target.value)}
-              onKeyDown={handleKeyDown}
-            />
-
-            <Button
-              variant="contained"
-              onClick={handleSendMessage}
-              disabled={!messageText?.trim()}
-              endIcon={<SendIcon />}
+        {selectedChatUser &&
+          (isEditing ? (
+            <Box
+              sx={{
+                p: 2,
+                borderTop: "1px solid #ddd",
+                display: "flex",
+                gap: 1,
+              }}
             >
-              Send
-            </Button>
-          </Box>
-        )}
+              <TextField
+                fullWidth
+                size="small"
+                value={messageText}
+                placeholder="Type a message..."
+                onChange={(event) => handleMessageChange(event.target.value)}
+                onKeyDown={handleKeyDown}
+              />
+              <Button
+                variant="contained"
+                onClick={handleCancel}
+                disabled={!messageText?.trim()}
+                endIcon={<Cancel />}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleSave}
+                disabled={!messageText?.trim()}
+                endIcon={<Save />}
+              >
+                Save
+              </Button>
+            </Box>
+          ) : (
+            <Box
+              sx={{
+                p: 2,
+                borderTop: "1px solid #ddd",
+                display: "flex",
+                gap: 1,
+              }}
+            >
+              <TextField
+                fullWidth
+                size="small"
+                value={messageText}
+                placeholder="Type a message..."
+                onChange={(event) => handleMessageChange(event.target.value)}
+                onKeyDown={handleKeyDown}
+              />
+
+              <Button
+                variant="contained"
+                onClick={handleSendMessage}
+                disabled={!messageText?.trim()}
+                endIcon={<SendIcon />}
+              >
+                Send
+              </Button>
+            </Box>
+          ))}
       </Box>
     </>
   );
